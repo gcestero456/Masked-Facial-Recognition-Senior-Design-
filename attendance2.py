@@ -76,6 +76,9 @@ while True:
                 cv2.imshow('Webcam', img)
                 createAttendance(name)
 
+            else:
+                print("No Face Recognized")
+
         #press'esc' to close program
         cv2.imshow('Webcam',img)
         cv2.waitKey(1)
