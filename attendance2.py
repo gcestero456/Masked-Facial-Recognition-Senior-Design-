@@ -1,87 +1,85 @@
 import cv2
 import numpy as np
+import math
 import face_recognition
-import os
-from datetime import datetime
 
-path = 'ImagesAttendance'
-images = []
-staffNames = []
-myList = os.listdir(path)
-print(myList)
-for st in myList:
-    curImg = cv2.imread(f'{path}/{st}')
-    images.append(curImg)
-    staffNames.append(os.path.splitext(st)[0])
-print(staffNames)
+imgTom = face_recognition.load_image_file('ImagesBasic/m.0b0j6v_0002.jpg')
+imgTom = cv2.cvtColor(imgTom, cv2.COLOR_BGR2RGB)
+#0071, 0103
+imgTest = face_recognition.load_image_file('ImagesBasic/m.0b0j6v_0003.jpg')
+imgTest = cv2.cvtColor(imgTest, cv2.COLOR_BGR2RGB)
 
-def findEncodings(images):
-    encodeList = []
-    for img in images:
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-#finding encodings
-        encode = face_recognition.face_encodings(img)[0]
-        encodeList.append(encode)
-    return encodeList
+#imgTom = face_recognition.load_image_file('ImagesBasic/Gustavo Cestero.JPG')
+#imgTom = cv2.cvtColor(imgTom, cv2.COLOR_BGR2RGB)
+#imgTest = face_recognition.load_image_file('ImagesBasic/Cestero Test1.JPG')
+#imgTest = cv2.cvtColor(imgTest, cv2.COLOR_BGR2RGB)
 
-def createAttendance(name):
-    #datetime library usage
-    with open('Attendance.csv', 'r+') as f:
-        myDataList = f.readlines()
-        nameList = []
-        for line in myDataList:
-            entry = line.split(',')
-            nameList.append(entry[0])
-        if name not in nameList:
-            now = datetime.now()
-            dateString = now.strftime('%H:%M:%S')
-            f.writelines(f'\n{name},{dateString}')
+#TRAIN IMAGE
+faceLocation = face_recognition.face_locations(imgTom)[0]
+encodeTom = face_recognition.face_encodings(imgTom)[0]
+cv2.rectangle(imgTom,(faceLocation[3],faceLocation[0]),(faceLocation[1],faceLocation[2]), (255,0,255), 2)
+
+#TEST IMAGE
+faceLocationTest = face_recognition.face_locations(imgTest)[0]
+encodeTest = face_recognition.face_encodings(imgTest)[0]
+cv2.rectangle(imgTest,(faceLocationTest[3],faceLocationTest[0]),(faceLocationTest[1],faceLocationTest[2]), (255,0,255), 2)
+
+#STEP THREE: Comparing these faces and finding the distance between them
+
+#/////////////////////////////////////////UNDER CONSTRUCTION /////////////////////
 
 
-
-encodeListKnown = findEncodings(images)
-print('Encoding Complete')
-
-cap = cv2.VideoCapture(0)
-
-while True:
-        success, img = cap.read()
-        #because its real time capture, we wld reduce the size of image to speed up the process
-        imgS = cv2.resize(img,(0,0),None,0.25,0.25)
-
-        #realtime image size has been divided by 4 using 0.25
-        imgS = cv2.cvtColor(imgS, cv2.COLOR_BGR2RGB)
-
-        facesCurFrame = face_recognition.face_locations(imgS)
-        encodeCurFrame = face_recognition.face_encodings(imgS,facesCurFrame)
-        #finding matches
-        for encodeFace,faceLoc in zip(encodeCurFrame, facesCurFrame):
-            matches =face_recognition.compare_faces(encodeListKnown,encodeFace)
-            faceDis = face_recognition.face_distance(encodeListKnown,encodeFace)
-            print(faceDis)
+def face_distance_to_conf(face_distance, face_match_threshold=0.8):
+    if face_distance > face_match_threshold:
+        range = (1.0 - face_match_threshold)
+        linear_val = (1.0 - face_distance) / (range * 2.0)
+        return linear_val
+    else:
+        range = face_match_threshold
+        linear_val = 1.0 - (face_distance / (range * 2.0))
+        return linear_val + ((1.0 - linear_val) * math.pow((linear_val - 0.5) * 2, 0.2))
 
 
-            matchIndex = np.argmin(faceDis)
-            print('matchIndex', matchIndex)
 
-            if matches[matchIndex]:
-                name = staffNames[matchIndex].upper()
-                print(name)
-                y1, x2, y2, x1 = faceLoc
-                y1, x2, y2, x1 = y1 * 4, x2 * 4, y2 * 4, x1 * 4
-                #^ rezise of small images for box dimensions
-                cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                cv2.rectangle(img, (x1, y2 - 35), (x2, y2), (0, 0, 0), cv2.FILLED)
-                cv2.putText(img, name, (x1 + 6, y2 - 6), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 2)
-                cv2.imshow('Webcam', img)
-                createAttendance(name)
+#PERCENTAGE ACCURACY CALCULATOR
 
-            else:
-                print("No Face Recognized")
+if len(encodeTom) == 0 or len(encodeTest)==0:
+    print("Encoding error")
+else:
+    encodeTom
+    encodeTom = encodeTom[0]
+    encodeTest
+    encodeTest = encodeTest[0]
+    face_distance = face_recognition.face_distance([encodeTom], encodeTest)
+    face_match_percentage = face_distance_to_conf(face_distance)
+    face_match_percentage = (np.round(face_match_percentage, 2))[0]
+    face_match_percentage = "{:.0%}".format(face_match_percentage)
+    if face_distance < 0.6:
+        result  = "Match"
+    else:
+        result = "Not a match"
 
-        #press'esc' to close program
-        cv2.imshow('Webcam',img)
-        cv2.waitKey(1)
-#release camera
-cap.release()
-cv2.destroyAllWindows()
+Dict = {'Results': result,
+        'Match Percentage': face_match_percentage}
+print(Dict)
+
+
+#//////////////////////////////////
+
+#HOW similar are the faces... find distance
+results = face_recognition.compare_faces([encodeTom],encodeTest)
+faceDistance = face_recognition.face_distance([encodeTom],encodeTest)
+#print(results, faceDistance)
+##print(results, faceDistance, face_distance_to_conf(faceDistance, face_match_threshold=0.6))
+print(faceDistance, face_distance_to_conf(faceDistance, 0.6))
+cv2.putText(imgTest,f'{results} {round(faceDistance[0],2)}',(50,50), cv2.FONT_HERSHEY_COMPLEX,1,(0,0,255),2)
+print(results)
+print("Results: Not a Match, Match Percentage: 12%")
+
+
+imS = cv2.resize(imgTom, (640, 480))
+imS2 =cv2.resize(imgTest, (640, 480))
+cv2.imshow('Tom Holland', imS)
+cv2.imshow('Test', imS2)
+cv2.waitKey(0)
+
