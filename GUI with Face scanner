@@ -1,26 +1,31 @@
 #!/usr/bin/python
 import cv2
+from cv2 import *
 import numpy as np
 import face_recognition
 import os
 from datetime import datetime
+import subprocess
 from tkinter import *
 import tkinter as tk
-from tkinter import ttk
+import time
+
+#from tkinter import ttk
 from PIL import Image, ImageTk
 
 
 def scanface():
+
     path = 'ImagesAttendance'
     images = []
-    staffNames = []
+    staffnames = []
     myList = os.listdir(path)
     print(myList)
     for st in myList:
         curImg = cv2.imread(f'{path}/{st}')
         images.append(curImg)
-        staffNames.append(os.path.splitext(st)[0])
-    print(staffNames)
+        staffnames.append(os.path.splitext(st)[0])
+    print(staffnames)
 
     def findEncodings(images):
         encodeList = []
@@ -69,8 +74,8 @@ def scanface():
             print('matchIndex', matchIndex)
 
             if matches[matchIndex]:
-                name = staffNames[matchIndex].upper()
-                print(name)
+                name = staffnames[matchIndex].upper()
+                print(name + str(" has been been authenticated"))
                 y1, x2, y2, x1 = faceLoc
                 y1, x2, y2, x1 = y1 * 4, x2 * 4, y2 * 4, x1 * 4
                 # ^ rezise of small images for box dimensions
@@ -79,6 +84,8 @@ def scanface():
                 cv2.putText(img, name, (x1 + 6, y2 - 6), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 2)
                 cv2.imshow('Webcam', img)
                 createAttendance(name)
+                scanner.destroy(b1)
+
 
             else:
                 print("No Face Recognized")
@@ -86,29 +93,74 @@ def scanface():
         # press'esc' to close program
         cv2.imshow('Webcam', img)
         cv2.waitKey(1)
-    # release camera
-    cap.release()
-    cv2.destroyAllWindows()
-    
+      #release camera
+    #cap.release()
+    #cv2.destroyAllWindows()
+
+
+def cam():
+    videoCaptureObject = cv2.VideoCapture(0)
+    while(True):
+        num1 = 0
+        path1 = 'ImageBasic'
+        path2 = 'ImagesAttendance'
+        person = input("please enter your First and last name: ")
+        while num1 < 5:
+            ret, frame = videoCaptureObject.read()
+            cv2.imshow('camera', frame)
+            input("press enter when Ready to take image. This is a NO MASK image. ")
+            res = person + str(num1)
+            if num1 == 0:
+                cv2.imwrite(path2 + '\ ' + person + str(".jpg"), frame)
+                cv2.imwrite(path1 + '\ ' + res + str(".jpg"), frame)
+            else:
+                cv2.imwrite(path1 + '\ ' + res + str(".jpg"), frame)
+            num1 = num1 + 1
+            time.sleep(1)
+            cv2.destroyWindow('camera')
+
+        while num1 < 10:
+            ret, frame = videoCaptureObject.read()
+            cv2.imshow('camera', frame)
+            input("press enter when Ready to take image. This is an image with the MASK ON. ")
+            res = person + str(num1)
+            cv2.imwrite(path1 + '\ ' + res + str(".jpg"), frame)
+            num1 = num1 + 1
+            time.sleep(1)
+            cv2.destroyWindow('camera')
+
+
+        scanner.destroy(b2)
+
+
+def addface():
+  #  key_in = input("please type in the name of the user: ")
+    subprocess.Popen(r'explorer /select, "C:\Users\owenj\PycharmProjects\pythonProject\SenDes\ImageBasic"')
+
+
 scanner = Tk()
+width = scanner.winfo_screenwidth()
+height = scanner.winfo_screenheight()
+#scanner.geometry("%dx%d"%(width,height))
 scanner.title('Face Scanner System')
 scanner.geometry('700x700')
 scanner['bg'] = '#5F9EF0'
 
+b1 = Button(scanner, text='Scan a face', activebackground='#5F0AFF', padx=20, pady=3, bd=7, command=scanface)
+b1.pack(padx=10, pady=10)
 
+b2 = Button(scanner, text='Add a user', activebackground='#000000', padx=20, pady=7, bd=7, command=cam)
+b2.pack(padx=10)
 
-b1 = Button(scanner, text='Scan a face', activebackground='#5F0AFF', padx=20, pady=3, bd='7', command = scanface)
-b1.pack(padx=10, pady=25)
+b3 = Button(scanner, text='Exit', bd='7', padx=20, pady=3, command=scanner.destroy)
+b3.pack(padx=10,pady=10)
 
-b2 = Button(scanner, text='Exit', bd='7', padx=20, pady=3, command=scanner.destroy)
-b2.pack()
-
-
-im=Image.open("C:/PycharmProjects/homework/face.jpg")  #This is the correct location and spelling for my image location
-photo=ImageTk.PhotoImage(im)
+im = Image.open(
+    "C:/PycharmProjects/homework/face.jpg")  # This is the correct location and spelling for my image location
+photo = ImageTk.PhotoImage(im)
 cv = tk.Canvas()
 cv.pack(side='top', fill='both', expand='yes')
-cv.create_image(10, 10, image=photo, anchor='nw')
+cv.create_image(10, 0, image=photo, anchor='nw')
 # message_box = Message(screen,text)
 
 scanner.mainloop()
